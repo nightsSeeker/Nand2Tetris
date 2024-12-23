@@ -1,0 +1,75 @@
+class Player {
+    field int x, y;          // Position (0,0 is top-left)
+    field int size;          // Size of player sprite
+    
+    /** Constructs a new player at specified position */
+    constructor Player new(int Ax, int Ay, int Asize) {
+        let x = Ax;
+        let y = Ay;
+        let size = Asize;
+        do draw();
+        return this;
+    }
+    
+    /** Disposes the player. */
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+    
+    /** Draws the player as a square */
+    method void draw() {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y, x + size, y + size);
+        return;
+    }
+    
+    /** Erases the player */
+    method void erase() {
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x, y, x + size, y + size);
+        return;
+    }
+    
+    /** Movement methods with proper boundary checking */
+    method void moveUp() {
+        if (y > 2) {  // Leave small margin from edge
+            do erase();
+            let y = y - 2;
+            do draw();
+        }
+        return;
+    }
+    
+    method void moveDown() {
+        if ((y + size) < 254) {  // Screen height (256) - margin
+            do erase();
+            let y = y + 2;
+            do draw();
+        }
+        return;
+    }
+    
+    method void moveLeft() {
+        if (x > 2) {  // Leave small margin from edge
+            do erase();
+            let x = x - 2;
+            do draw();
+        }
+        return;
+    }
+    
+    method void moveRight() {
+        if ((x + size) < 510) {  // Screen width (512) - margin
+            do erase();
+            let x = x + 2;
+            do draw();
+        }
+        return;
+    }
+    
+    /** Position accessors */
+    method int getX() { return x; }
+    method int getY() { return y; }
+    method int getSize() { return size; }
+}

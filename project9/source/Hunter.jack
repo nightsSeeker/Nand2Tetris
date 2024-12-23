@@ -1,0 +1,71 @@
+class Hunter {
+    field int x, y;        // Center position of the ball
+    field int radius;      // Ball radius
+    
+    /** Constructs a new hunter ball */
+    constructor Hunter new(int Ax, int Ay) {
+        let x = Ax;
+        let y = Ay;
+        let radius = 4;    // Small enough to see clearly
+        do draw();
+        return this;
+    }
+    
+    /** Disposes this hunter */
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+    
+    /** Draws the hunter */
+    method void draw() {
+        do Screen.setColor(true);
+        do Screen.drawCircle(x, y, radius);
+        return;
+    }
+    
+    /** Erases the hunter */
+    method void erase() {
+        do Screen.setColor(false);
+        do Screen.drawCircle(x, y, radius);
+        return;
+    }
+    
+    /** Moves towards the player with proper boundary checking */
+    method void moveTowards(Player p) {
+        var int targetX, targetY;
+        var int dx, dy;
+        
+        let targetX = p.getX() + (p.getSize() / 2);  // Target player center
+        let targetY = p.getY() + (p.getSize() / 2);
+        
+        // Calculate movement direction
+        let dx = 0;
+        let dy = 0;
+        
+        if (x < targetX) { let dx = 1; }
+        if (x > targetX) { let dx = -1; }
+        if (y < targetY) { let dy = 1; }
+        if (y > targetY) { let dy = -1; }
+        
+        // Only move if within bounds
+        if ((x + dx > radius) & (x + dx < (512 - radius))) {
+            do erase();
+            let x = x + dx;
+            do draw();
+        }
+        
+        if ((y + dy > radius) & (y + dy < (256 - radius))) {
+            do erase();
+            let y = y + dy;
+            do draw();
+        }
+        
+        return;
+    }
+    
+    /** Position and size accessors */
+    method int getX() { return x; }
+    method int getY() { return y; }
+    method int getRadius() { return radius; }
+}

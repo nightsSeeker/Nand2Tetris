@@ -1,0 +1,100 @@
+class ChaseGame {
+    field Player player;    
+    field Hunter hunter;    
+    field boolean exit;     
+    field int score;       
+    
+    constructor ChaseGame new() {
+        do Screen.clearScreen();
+        // Player starts bottom-left, hunter starts top-right
+        let player = Player.new(10, 220, 16);    
+        let hunter = Hunter.new(480, 10);       
+        let exit = false;
+        let score = 0;
+        
+        do Output.moveCursor(0,0);
+        do Output.printString("Score: 0");
+        return this;
+    }
+    
+    method void dispose() {
+        do player.dispose();
+        do hunter.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+    
+    method boolean checkCollision() {
+        var int px, py, hx, hy;
+        var int dx, dy;
+        var int distanceSquared;
+        
+        // Get object centers
+        let px = player.getX() + (player.getSize() / 2);
+        let py = player.getY() + (player.getSize() / 2);
+        let hx = hunter.getX();
+        let hy = hunter.getY();
+        
+        // Calculate distance
+        let dx = px - hx;
+        let dy = py - hy;
+        
+        return ((dx > -5) & (dx < 5)) & ((dy > -5) & (dy < 5)); 
+    }
+    
+     method void run() {
+        var char key;
+        
+        while (~exit) {
+            // Wait for a key press
+            while (key = 0) {
+                let key = Keyboard.keyPressed();
+           
+                do hunter.moveTowards(player);
+                
+                if (checkCollision()) {
+                    let exit = true;
+                } else {
+                    let score = score + 1;
+                    do Output.moveCursor(0,7);
+                    do Output.printInt(score);
+                }
+        
+                 do Sys.wait(10);
+            }
+    
+            
+            // Wait for key release
+            while (~(key = 0)) {
+                let key = Keyboard.keyPressed();
+
+                // Handle the pressed key
+                if (key = 81) { let exit = true; }     // q key
+                if (key = 131) { do player.moveUp(); }    // up arrow
+                if (key = 133) { do player.moveDown(); }  // down arrow
+                if (key = 130) { do player.moveLeft(); }  // left arrow
+                if (key = 132) { do player.moveRight(); } // right arrow
+              
+
+
+                do hunter.moveTowards(player);
+                
+                if (checkCollision()) {
+                    let exit = true;
+                } else {
+                    let score = score + 1;
+                    do Output.moveCursor(0,7);
+                    do Output.printInt(score);
+                }
+                
+                do Sys.wait(50);
+            }
+           
+        }
+        
+        do Output.moveCursor(10,27);
+        do Output.printString("Game Over! Score: ");
+        do Output.printInt(score);
+        return;
+    }
+}
