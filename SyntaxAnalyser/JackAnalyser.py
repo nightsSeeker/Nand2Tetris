@@ -1,4 +1,5 @@
 from ast import List
+import os
 import sys
 from lxml import etree
 
@@ -49,6 +50,11 @@ symbols = [
     ".",
     ",",
     ";",
+    "~",
+    "while",
+    "return",
+]
+operands = [
     "+",
     "-",
     "*",
@@ -58,12 +64,17 @@ symbols = [
     "<",
     ">",
     "=",
-    "~",
-    "while",
-    "return",
 ]
 
-
+def first_occurrence(lst, char1, char2):
+   # Get index of first occurrence of each char
+   try:
+       i1 = lst.index(char1)
+       i2 = lst.index(char2)
+       return char1 if i1 < i2 else char2
+   except ValueError:  # Handle if char not found
+       return char2 if char1 not in lst else char1
+   
 def is_integer(input):
     try:
         int(input)
@@ -93,19 +104,20 @@ def jack_parser(jack_xml, jack_code: List, index=0, stopping_cond=[]):
     item = jack_code[index]
 
     if item in keywords:
-
         if item in xml_node_declaration.keys():
             value = xml_node_declaration[item]
-            xml_val_block = etree.SubElement(jack_xml, value)
-            keyword = etree.SubElement(jack_xml, "keyword")
-            keyword.text = item
-            xml_val_block.append(keyword)
+            jack_xml_chlds = [x for x in jack_xml.iter("statements")]
             if value.endswith("Statement"):
-                statements = etree.SubElement(jack_xml, "statements")
-                statements.append(xml_val_block)
-                jack_xml.append(statements)
+                if "statements" not in [x.tag for x in jack_xml_chlds]:
+                    statements = etree.SubElement(jack_xml, "statements")
+                    xml_val_block = etree.SubElement(statements, value)
+                else:
+                    xml_val_block = etree.SubElement(jack_xml_chlds[0], value)
             else:
-                jack_xml.append(xml_val_block)
+                xml_val_block = etree.SubElement(jack_xml, value)
+            keyword = etree.SubElement(xml_val_block, "keyword")
+            keyword.text = item
+
             index = jack_parser(
                 xml_val_block,
                 jack_code,
@@ -117,12 +129,28 @@ def jack_parser(jack_xml, jack_code: List, index=0, stopping_cond=[]):
                     else "}"
                 ),
             )
+            if item in ["if", "while"]:
+                item = jack_code[index + 1]
+            else:
+                item = jack_code[index]
+        elif jack_xml.tag == "expressionList" and item != ")":
+            expression = etree.SubElement(jack_xml, "expression")
+            x =  first_occurrence(jack_code[index:],",",")")
+            index = jack_parser(
+                expression,
+                jack_code,
+                index,
+                first_occurrence(jack_code[index:],",",")"),
+            )
             item = jack_code[index]
+        elif jack_xml.tag == "expression":
+            term = etree.SubElement(jack_xml, "term")
+            keyword = etree.SubElement(term, "keyword")
+            keyword.text = item
         else:
             keyword = etree.SubElement(jack_xml, "keyword")
             keyword.text = item
-            jack_xml.append(keyword)
-    elif item in symbols:
+    elif item in symbols + operands:
         if item == "(" and jack_xml.tag == "subroutineDec":
             symbol = etree.SubElement(jack_xml, "symbol")
             symbol.text = item
@@ -131,63 +159,72 @@ def jack_parser(jack_xml, jack_code: List, index=0, stopping_cond=[]):
             jack_xml.append(parameterList)
             index = jack_parser(parameterList, jack_code, index + 1, ")")
             item = jack_code[index]
-        elif item == "{" and jack_xml.tag == "subroutineDec":
+        elif item == "{" and jack_xml.tag in ["subroutineDec"]:
             subroutineBody = etree.SubElement(jack_xml, "subroutineBody")
-            jack_xml.append(subroutineBody)
-            symbol = etree.SubElement(jack_xml, "symbol")
+            symbol = etree.SubElement(subroutineBody, "symbol")
             symbol.text = item
-            subroutineBody.append(symbol)
             index = jack_parser(subroutineBody, jack_code, index + 1, "}")
             item = jack_code[index]
-        elif jack_code[index - 1] in ["if", "("] and jack_xml.tag in [
-            "ifStatement",
-            "whileStatement",
-        ]:
+        elif item in ["[", "("] and jack_xml.tag in ["ifStatement", "whileStatement"]:
             symbol = etree.SubElement(jack_xml, "symbol")
             symbol.text = item
-            jack_xml.append(symbol)
-
             expression = etree.SubElement(jack_xml, "expression")
-            term = etree.SubElement(jack_xml, "term")
-            jack_xml.append(expression)
-            expression.append(term)
-
             index = jack_parser(expression, jack_code, index + 1, ")")
             item = jack_code[index]
-
-        elif jack_xml.tag == "expression":
+        elif item in ["[", "("] and jack_xml.tag == "expression":
+            term = etree.SubElement(jack_xml, "term")
+            symbol = etree.SubElement(term, "symbol")
+            expression = etree.SubElement(term, "expression")
+            symbol.text = item
+            index = jack_parser(expression, jack_code, index + 1, ")")
+            symbol = etree.SubElement(term, "symbol")
+            symbol.text = ")"
+            item = jack_code[index + 1]
+        elif item in ["("] and jack_xml.tag.endswith("Statement"):
             symbol = etree.SubElement(jack_xml, "symbol")
             symbol.text = item
-            jack_xml.append(symbol)
-        else:
+            expressionList = etree.SubElement(jack_xml, "expressionList")
+            index = jack_parser(expressionList, jack_code, index + 1, ")")
+            symbol = etree.SubElement(jack_xml, "symbol")
+            symbol.text = ")"
+            item = jack_code[index]
+        elif jack_xml.tag == "expression" and item in operands:
             symbol = etree.SubElement(jack_xml, "symbol")
             symbol.text = item
-            jack_xml.append(symbol)
+        elif jack_xml.tag == "expressionList" and item in operands:
+            expression = etree.SubElement(jack_xml, "expression")
+            index = jack_parser(
+                expression,
+                jack_code,
+                index,
+                first_occurrence(jack_code[index:],",",")"),
+            )
+            item = jack_code[index]
+        elif jack_xml.tag not in ["expression", "term"]:
+            symbol = etree.SubElement(jack_xml, "symbol")
+            symbol.text = item
     elif is_identifier(item):
-        if jack_code[index - 1] == "(" and jack_xml.tag in [
-            "ifStatement",
-            "whileStatement",
-        ]:
+        if jack_xml.tag == "expression":
+            term = etree.SubElement(jack_xml, "term")
+            identifier = etree.SubElement(term, "identifier")
+            identifier.text = item
+        elif jack_xml.tag == "expressionList" and item != ")":
             expression = etree.SubElement(jack_xml, "expression")
-            term = etree.SubElement(jack_xml, "term")
-            jack_xml.append(expression)
-            expression.append(term)
-
-            identifier = etree.SubElement(jack_xml, "identifier")
-            identifier.text = item
-            term.append(identifier)
-            index = jack_parser(expression, jack_code, index + 1, ")")
+            x =  first_occurrence(jack_code[index:],',',')')
+            index = jack_parser(
+                expression,
+                jack_code,
+                index,
+                first_occurrence(jack_code[index:],',',')'),
+            )
             item = jack_code[index]
-        elif jack_xml.tag == "expression":
-            term = etree.SubElement(jack_xml, "term")
-            identifier = etree.SubElement(jack_xml, "identifier")
-            identifier.text = item
-            term.append(identifier)
-            jack_xml.append(term)
+        elif jack_xml.tag == "letStatement" and jack_code[index - 1] == "=":
+            expression = etree.SubElement(jack_xml, "expression")
+            index = jack_parser(expression, jack_code, index, ";")
+            item = jack_code[index]
         else:
             identifier = etree.SubElement(jack_xml, "identifier")
             identifier.text = item
-            jack_xml.append(identifier)
     elif is_integer(item):
         if jack_xml.tag == "expression":
             term = etree.SubElement(jack_xml, "term")
@@ -202,7 +239,7 @@ def jack_parser(jack_xml, jack_code: List, index=0, stopping_cond=[]):
         string = etree.SubElement(jack_xml, "stringConstant")
         string.text = item
         jack_xml.append(string[1])
-    if item == stopping_cond and jack_xml.tag in [
+    if item in stopping_cond and jack_xml.tag in [
         "classVarDec",
         "subroutineDec",
         "parameterList",
@@ -214,6 +251,7 @@ def jack_parser(jack_xml, jack_code: List, index=0, stopping_cond=[]):
         "returnStatement",
         "term",
         "expression",
+        "expressionList",
     ]:
         return index
     return jack_parser(jack_xml, jack_code, index + 1, stopping_cond)
@@ -265,5 +303,10 @@ if __name__ == "__main__":
     file_name = sys.argv[1]
     jack_xml = etree.Element("class")
     jack_code = tokenise(file_name)
-    jack_xml = jack_parser(jack_xml, jack_code)
-    print(etree.tostring(jack_xml, pretty_print=True).decode())
+    jack_xml = etree.tostring(
+        jack_parser(jack_xml, jack_code), pretty_print=True
+    ).decode()
+    output_file = file_name.rstrip(".jack") + ".xml"
+    # output_file = os.path.join(file_name, os.path.basename(file_name) + ".xml")
+    with open(output_file, "w") as file:
+        file.write(jack_xml)
