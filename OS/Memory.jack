@@ -1,0 +1,66 @@
+
+class Memory {
+    static Array memory;
+    static Array freeList;
+    static int heapBase;
+    
+    // Initializes memory operations
+    function void init() {
+        let memory = 0;
+        let heapBase = 2048; // heapBase
+        let freeList = heapBase;
+        let freeList[0] = 0;    // next
+        let freeList[1] = 14334; // size (16384 - 2048 - 2)
+        return;
+    }
+    
+    // Returns the RAM value at the given address
+    function int peek(int address) {
+        return memory[address];
+    }
+    
+    // Sets the RAM value at the given address to the given value
+    function void poke(int address, int value) {
+        let memory[address] = value;
+        return;
+    }
+    
+    // Finds and allocates a memory block of the given size
+    function Array alloc(int size) {
+        var Array block, prev;
+        let prev = freeList;
+        let block = freeList;
+        
+        while (~(block = 0)) {
+            if (~(block[1] < (size + 2))) {
+                if (block[1] > (size + 2)) {
+                    let block[1] = block[1] - (size + 2);
+                    let block = block + block[1];
+                    let block[0] = 0;
+                    let block[1] = size;
+                }
+                else {
+                    if (prev = freeList) {
+                        let freeList = block[0];
+                    }
+                    else {
+                        let prev[0] = block[0];
+                    }
+                }
+                return block + 2;
+            }
+            let prev = block;
+            let block = block[0];
+        }
+        return 0;
+    }
+    
+    // De-allocates the given object and frees its memory space
+    function void deAlloc(Array o) {
+        var Array block;
+        let block = o - 2;
+        let block[0] = freeList;
+        let freeList = block;
+        return;
+    }
+}

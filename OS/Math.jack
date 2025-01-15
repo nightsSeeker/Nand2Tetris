@@ -1,0 +1,269 @@
+// File name: projects/12/String.jack
+class String {
+    field Array str;      // Stores the characters
+    field int length;     // Current length
+    field int maxLength;  // Maximum length allowed
+
+    /** constructs a new empty string with a maximum length of maxLength
+     *  and initial length of 0. */
+    constructor String new(int maxLength) {
+        if (maxLength = 0) {
+            let maxLength = 1;
+        }
+        let str = Array.new(maxLength);
+        let length = 0;
+        let maxLength = maxLength;
+        return this;
+    }
+
+    /** Disposes this string. */
+    method void dispose() {
+        do str.dispose();
+        return;
+    }
+
+    /** Returns the current length of this string. */
+    method int length() {
+        return length;
+    }
+
+    /** Returns the character at the j-th location of this string. */
+    method char charAt(int j) {
+        return str[j];
+    }
+
+    /** Sets the character at the j-th location of this string to c. */
+    method void setCharAt(int j, char c) {
+        let str[j] = c;
+        return;
+    }
+
+    /** Appends c to this string's end and returns this string. */
+    method String appendChar(char c) {
+        if (length < maxLength) {
+            let str[length] = c;
+            let length = length + 1;
+        }
+        return this;
+    }
+
+    /** Erases the last character from this string. */
+    method void eraseLastChar() {
+        if (length > 0) {
+            let length = length - 1;
+        }
+        return;
+    }
+
+    /** Returns the integer value of this string, 
+     *  until a non-digit character is detected. */
+    method int intValue() {
+        var int val, i, d;
+        var boolean neg;
+        
+        let val = 0;
+        let i = 0;
+        let neg = false;
+        
+        if ((length > 0) & (str[0] = 45)) { // Check for minus sign
+            let neg = true;
+            let i = 1;
+        }
+        
+        while (i < length) {
+            let d = str[i] - 48;  // Convert char to int
+            if ((d < 0) | (d > 9)) {
+                if (neg) {
+                    return -val;
+                }
+                return val;
+            }
+            let val = (val * 10) + d;
+            let i = i + 1;
+        }
+        
+        if (neg) {
+            return -val;
+        }
+        return val;
+    }
+
+    /** Sets this string to hold a representation of the given value. */
+    method void setInt(int val) {
+        let length = 0;
+        
+        if (val < 0) {
+            let val = -val;
+            do appendChar(45);  // Add minus sign
+        }
+        
+        do setIntHelper(val);
+        return;
+    }
+
+    // Helper method for setInt
+    method void setIntHelper(int val) {
+        var int nextVal;
+        var int lastDigit;
+        
+        let nextVal = val / 10;
+        let lastDigit = val - (nextVal * 10);
+        
+        if (val < 10) {
+            do appendChar(lastDigit + 48);
+        }
+        else {
+            do setIntHelper(nextVal);
+            do appendChar(lastDigit + 48);
+        }
+        return;
+    }
+
+    /** Returns the new line character. */
+    function char newLine() {
+        return 128;
+    }
+
+    /** Returns the backspace character. */
+    function char backSpace() {
+        return 129;
+    }
+
+    /** Returns the double quote (") character. */
+    function char doubleQuote() {
+        return 34;
+    }
+}
+
+// File name: projects/12/Math.jack
+class Math {
+    static Array twoToThe; // Stores powers of 2: 2^0, 2^1, 2^2,..., 2^15
+
+    /** Initializes the library */
+    function void init() {
+        let twoToThe = Array.new(16);
+        let twoToThe[0] = 1;
+        let twoToThe[1] = 2;
+        let twoToThe[2] = 4;
+        let twoToThe[3] = 8;
+        let twoToThe[4] = 16;
+        let twoToThe[5] = 32;
+        let twoToThe[6] = 64;
+        let twoToThe[7] = 128;
+        let twoToThe[8] = 256;
+        let twoToThe[9] = 512;
+        let twoToThe[10] = 1024;
+        let twoToThe[11] = 2048;
+        let twoToThe[12] = 4096;
+        let twoToThe[13] = 8192;
+        let twoToThe[14] = 16384;
+        let twoToThe[15] = 16384 + 16384; // 2^15
+        return;
+    }
+
+    /** Returns the absolute value of x */
+    function int abs(int x) {
+        if (x < 0) {
+            return -x;
+        }
+        return x;
+    }
+
+    /** Returns the product of x and y */
+    function int multiply(int x, int y) {
+        var int sum, shiftedX, j;
+        let sum = 0;
+        let shiftedX = x;
+        let j = 0;
+        
+        while (j < 16) {
+            if (Math.bit(y, j)) {
+                let sum = sum + shiftedX;
+            }
+            let shiftedX = shiftedX + shiftedX;
+            let j = j + 1;
+        }
+        return sum;
+    }
+
+    /** Returns true if the i-th bit of x is 1, false otherwise */
+    function boolean bit(int x, int i) {
+        return ~((x & twoToThe[i]) = 0);
+    }
+
+    /** Returns the integer part of x/y */
+    function int divide(int x, int y) {
+        var int q;
+        var boolean neg;
+        
+        let neg = false;
+        if (x < 0) {
+            let x = -x;
+            let neg = ~neg;
+        }
+        if (y < 0) {
+            let y = -y;
+            let neg = ~neg;
+        }
+        
+        let q = Math.dividePositive(x, y);
+        
+        if (neg) {
+            return -q;
+        }
+        return q;
+    }
+
+    /** Helper function for divide */
+    function int dividePositive(int x, int y) {
+        var int q;
+        if ((y > x) | (y < 0)) {
+            return 0;
+        }
+        let q = Math.dividePositive(x, y + y);
+        if ((x - (Math.multiply(q + q, y))) < y) {
+            return q + q;
+        }
+        else {
+            return q + q + 1;
+        }
+    }
+
+    /** Returns the integer part of the square root of x */
+    function int sqrt(int x) {
+        var int y, j, approx, approxSquared;
+        
+        if (x < 0) {
+            return 0;
+        }
+        
+        let y = 0;
+        let j = 7;  // (16/2) - 1
+        
+        while (~(j < 0)) {
+            let approx = y + twoToThe[j];
+            let approxSquared = Math.multiply(approx, approx);
+            if (~(approxSquared > x) & (approxSquared > 0)) {
+                let y = approx;
+            }
+            let j = j - 1;
+        }
+        return y;
+    }
+
+    /** Returns the greater number */
+    function int max(int a, int b) {
+        if (a > b) {
+            return a;
+        }
+        return b;
+    }
+
+    /** Returns the smaller number */
+    function int min(int a, int b) {
+        if (a < b) {
+            return a;
+        }
+        return b;
+    }
+}

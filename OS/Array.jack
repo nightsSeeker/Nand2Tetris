@@ -1,0 +1,12 @@
+class Array {
+    // Creates a new array of given size
+    function Array new(int size) {
+        return Memory.alloc(size);
+    }
+
+    // Disposes this array
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+}
